@@ -1,0 +1,234 @@
+#!/bin/bash
+#
+# The fig2eps script translates fig files to eps format. If the fig file
+# contains special text, the script invokes latex to typeset this special
+# text and include it in the output file.
+
+program=`basename "$0"`
+class="article"
+options=""
+addpackages="epsfig"
+packages=""
+colorcmd="\gdef\color[#1]#2{\relax}"
+fontdef="{\relax}"
+forced="n"
+resolution=""
+
+echo -e "$program 2002/08/05 by Wouter Kager\n"
+
+# Scan command line options.
+while getopts ":c:CfFp:r:" optionkey $*; do
+	case $optionkey in
+		c)	class="$class]$OPTARG" ;;
+		C)	colorcmd=""
+			addpackages="color,epsfig" ;;
+		f)	forced="y" ;;
+		F)	fontdef="{\reset@font\fontsize{#1}{#2pt}\fontfamily{#3}"
+			fontdef="$fontdef\fontseries{#4}\fontshape{#5}\selectfont}" ;;
+		p)	packages="$packages$OPTARG," ;;
+		r)	resolution="-D $OPTARG" ;;
+		:)	echo "$program: the option -$OPTARG requires an argument!"
+			echo "$program: run $program without arguments for help"
+			exit 1 ;;
+		?)	echo "$program: the option -$OPTARG is illegal!"
+			echo "$program: run $program without arguments for help"
+			exit 1 ;;
+	esac
+done
+
+# Shift away the specified options.
+shift $[$OPTIND-1]
+
+# Check if we have received any input files.
+if [ $# -eq 0 ]; then
+	cat <<-EOF
+		Usage: $program [options] file(s)
+		
+		The valid options are:
+		 -f           force existing files to be overwritten
+		 -C           turn on color switching (use color package)
+		 -F           turn on font switching
+		 -r res       specify the output resolution in dpi
+		 -c class     specify the document class (default=article)
+		 -p packages  specify packages (epsfig is always included)
+		
+		Packages must be specified as a comma-seperated list, with
+		options for a particular package written directly in front
+		of the package name between square brackets. Likewise, you
+		can specify class options between square brackets directly
+		in front of the class name. In this case you may leave out
+		the class name to use the default article class.
+		
+		Example: fig2eps -c [12pt] -p txfonts,[one,two]mysty *.fig
+		EOF
+	exit 0
+fi
+
+# This is a bit of tricky code that parses the class and packages arguments.
+# It results in appropriate \documentclass and \usepackage strings stored in
+# the variables class and packages, respectively.
+for field in `echo "$class" | tr "]" " "`
+do
+	if [ `echo "$field" | cut -c1` = "[" ]; then
+		options="$field]"
+	else
+		class="{$field}"
+	fi
+done
+class="\documentclass$options$class"
+
+temp=`echo "$packages" | tr "]" " "`
+packages="\usepackage"
+options=""
+for field in $temp
+do
+	for subfield in `echo "$field" | tr "," " "`
+	do
+		if [ `echo "$subfield" | cut -c1` = "[" ]; then
+			options="$subfield"
+		else
+			if [ "$options" = "" ]; then
+				packages="$packages{$subfield}\usepackage"
+			else
+				options="$options,$subfield"
+			fi
+		fi
+	done
+	if [ ! "$options" = "" ]; then
+		packages="$packages$options]"
+		options=""
+	fi
+done
+packages="$packages{$addpackages}"
+
+# Prepare for the conversion.
+temp="$program$$"
+answer="y"
+filelist="$temp.tex $temp.aux $temp.dvi $temp.log $temp.eps"
+
+# Make sure existing files are only overwritten if the user agrees.
+for j in $filelist
+do
+	if [ -e "$j" ]; then
+		if [ ! "$forced" = "y" ]; then
+			echo "$program: warning, the file $j exists!"
+			echo -n "$program: should I overwrite it (y/n)? "
+			read answer
+		fi
+		if [ ! "$answer" = "y" ]; then
+			echo "$program: program terminated [ok]"
+			exit 0
+		fi
+	fi
+done   
+
+# Loop through all files specified on the command line.
+for file
+do
+
+# Clean up existing temp files.
+rm -f $filelist
+
+# Get the base name of the file we are processing.
+if [ `dirname "$file"` = "." ]; then
+	dir=""
+else
+	dir=`dirname "$file"`/
+fi
+base=$dir`basename "$file" .fig`
+
+answer="y"
+
+# See if the input file is there.
+if [ ! -f "$base.fig" ]; then
+	echo -e "$program: file $base.fig: no such file (skipping)\n"
+	continue
+fi
+if [ ! -r "$base.fig" ]; then
+	echo -e "$program: file $base.fig: not readable (skipping)\n"
+	continue
+fi
+
+echo "$program: processing file $base.fig"
+
+# Only overwrite existing eps file if the user agrees.
+if [ -e "$base.eps" ]; then
+	if [ ! "$forced" = "y" ]; then
+		echo "$program: warning, the file $base.eps exists!"
+		echo -n "$program: should I overwrite it (y/n)? "
+		read answer
+	fi
+fi
+
+# See if the fig file contains special text and determine conversion method.
+method=`awk 'BEGIN {special=0}
+			/\\\\001/ {if ( $1==4 && ($9/2)%2==1 )
+			{special=1; print "latex"; exit}}
+			END {if (special==0) {print "fig2dev"}}' "$base.fig"`
+
+# Perform the conversion or skip the file.
+if [ "$answer" = "y" ]; then
+	case $method in
+	"latex")
+		echo "$program: special text found, invoking latex"
+		fig2dev -L pstex "$base.fig" "$temp.eps" 2> "$temp.log"
+		if [ ! "$?" = "0" ]; then
+			echo "$program: fig2dev reported the following errors:"
+			cat "$temp.log"
+			echo -e "$program: $base.fig could not be converted [error]\n"
+			continue
+		fi
+		cat > "$temp.tex" <<-EOF
+			$class$packages\parindent=0pt%
+			\makeatletter\gdef\SetFigFont#1#2#3#4#5$fontdef%
+			$colorcmd\makeatother\pagestyle{empty}%
+			\begin{document}%
+			EOF
+		fig2dev -L pstex_t -p "$temp.eps" "$base.fig" |
+		awk 'BEGIN {output=1}
+			/\\begingroup/ {output=0}
+			/\\begin{picture}/ {if (output==0) {output=1}}
+			{if (output==1) {print}}
+			END {print "\\end{document}"}' >> "$temp.tex"
+		latex -interaction=batchmode "$temp.tex" 1> /dev/null
+		if [ ! "$?" = "0" ]; then
+			echo "$program: latex reported the following errors:"
+			awk '$1 ~ /!/ {if ($1=="!") print}' "$temp.log"
+			echo -e "$program: $base.fig could not be converted [error]\n"
+		else
+			dvips $resolution -q -E -o "$temp.aux" "$temp.dvi" 2> "$temp.log"
+			if [ ! "$?" = "0" ]; then
+				echo "$program: dvips reported the following errors:"
+				cat "$temp.log"
+				echo -e "$program: $base.fig could not be converted [error]\n"
+				continue
+			fi
+			cat > "$temp.tex" <<-EOF
+				s/%%Creator:/& fig2eps and/
+				s/%%Title: $temp.dvi/%%Title: $base.fig/
+				s/ %[^%].*//
+				/^%[^%!]/d
+				/^%$/d
+				EOF
+			sed -f "$temp.tex" "$temp.aux" > "$base.eps"
+			echo -e "$program: $base.fig -> $base.eps [ok]\n"
+		fi ;;
+	"fig2dev")
+		echo "$program: no special text found, converting directly"
+		fig2dev -L pstex "$base.fig" "$base.eps" 2> "$temp.log"
+		if [ ! "$?" = "0" ]; then
+			echo "$program: fig2dev reported the following errors:"
+			cat "$temp.log"
+			echo -e "$program: $base.fig could not be converted [error]\n"
+			continue
+		fi
+		echo -e "$program: $base.fig -> $base.eps [ok]\n" ;;
+	esac    
+else
+	echo -e "$program: $base.fig skipped [ok]\n"
+fi
+
+done
+
+# Clean up.
+rm -f $filelist
