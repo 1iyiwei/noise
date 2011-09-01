@@ -655,7 +655,7 @@ echo unknown normalization option;
 exit(1);
 endif
 
-${rainbow_dir}/src/Scripts/txt2dat ${output_dir}/${base_name}_average${num_runs}_mean.txt ${output_dir}/${base_name}_average${num_runs}_variance.txt ${hist_normalization_const} ${output_dir}/${base_name}_average${num_runs}_mean.dat ${output_dir}/${base_name}_average${num_runs}_variance.dat 1
+./src/Scripts/txt2dat ${output_dir}/${base_name}_average${num_runs}_mean.txt ${output_dir}/${base_name}_average${num_runs}_variance.txt ${hist_normalization_const} ${output_dir}/${base_name}_average${num_runs}_mean.dat ${output_dir}/${base_name}_average${num_runs}_variance.dat 1
 
 echo set terminal postscript eps >> foo.gp
 echo set output \'${output_dir}/${base_name}_average${num_runs}_mean.eps\' >> foo.gp
