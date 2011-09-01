@@ -238,6 +238,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AdoptSamples", "Main\AdoptS
 		{B36D6721-BD41-4789-81C8-E522F61FFDA5} = {B36D6721-BD41-4789-81C8-E522F61FFDA5}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MakeBlobs", "Main\MakeBlobs.vcproj", "{DA8BCD3E-49D6-4E6D-9357-74A8599B2471}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B36D6721-BD41-4789-81C8-E522F61FFDA5} = {B36D6721-BD41-4789-81C8-E522F61FFDA5}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
 		Debug = Debug
@@ -436,6 +441,10 @@ Global
 		{32592F53-B538-45DB-BA22-232308DFB094}.Debug.Build.0 = Debug|Win32
 		{32592F53-B538-45DB-BA22-232308DFB094}.Release.ActiveCfg = Release|Win32
 		{32592F53-B538-45DB-BA22-232308DFB094}.Release.Build.0 = Release|Win32
+		{DA8BCD3E-49D6-4E6D-9357-74A8599B2471}.Debug.ActiveCfg = Debug|Win32
+		{DA8BCD3E-49D6-4E6D-9357-74A8599B2471}.Debug.Build.0 = Debug|Win32
+		{DA8BCD3E-49D6-4E6D-9357-74A8599B2471}.Release.ActiveCfg = Release|Win32
+		{DA8BCD3E-49D6-4E6D-9357-74A8599B2471}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

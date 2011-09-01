@@ -1,7 +1,5 @@
 #!/bin/tcsh -f
 
-set rainbow_dir = ../RainbowNoise;
-
 #echo $#argv
 
 if ($#argv < 1) then
@@ -46,7 +44,7 @@ echo "1 2 1 0.5 0.5 0.3 0.3" > ${output_dir}/${domain_option}.txt
 set domain_res_1d = 32;
 set domain_res = ${domain_res_1d}x${domain_res_1d};
 
-${rainbow_dir}/src/Sain/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
+./src/Main/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
 
 ./src/Main/Release/PFM2F2M ${output_dir}/${domain_option}.pfm ${output_dir}/${domain_option}.f2m
 
@@ -204,7 +202,7 @@ set importance_cell_size = 0.125; # 1.0/8
 
 set domain_res = ${domain_res_1d}x${domain_res_1d};
 
-${rainbow_dir}/src/Sain/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
+./src/Main/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
 
 ./src/Main/Release/PFM2F2M ${output_dir}/${domain_option}.pfm ${output_dir}/${domain_option}.f2m
 
@@ -440,7 +438,7 @@ set domain_res_1d = 32;
 set domain_res = ${domain_res_1d}x${domain_res_1d};
 set importance_cell_size = 0.03125; #1/32
 
-${rainbow_dir}/src/Sain/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
+./src/Main/Release/MakeBlobs ${output_dir}/${domain_option}.txt ${output_dir}/${domain_option}.pfm ${domain_res_1d} 1 ${domain_size};
 
 ./src/Main/Release/PFM2F2M ${output_dir}/${domain_option}.pfm ${output_dir}/${domain_option}.f2m
 

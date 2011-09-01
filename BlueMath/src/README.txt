@@ -10,6 +10,8 @@ svn co http://svn.liyiwei.org/public/BlueMath
 **** Compilation ****
 I compiled the code via Visual Studio .net 2003. The code should be compatible with later generation of Visual Studios, but I have not tried any of these.
 
+You should also build under the Script directory; I put a Makefile there.
+
 **** Run ****
 Take a look at src/Scripts/regress.sh to see examples on how to use the code.
 I am using cygwin + windows.
