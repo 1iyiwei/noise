@@ -1,8 +1,17 @@
+**** Access ****
+I put the code under a public svn (subversion) repository. This is easier for me to maintain than a binary zip file. Simply perform the following to get my source code:
 
-Compile: just use rainbow.sln
+svn co http://svn.liyiwei.org/public/RainbowNoise
 
-Usage:
-Invoke rc/Main/Release/DartThrowing without any arguments will tell you what arguments to use.
+**** Compilation ****
+
+I compiled the code via Visual Studio .net 2003. The code should be compatible with later generation of Visual Studios, but I have not tried any of these.
+
+See rainbow.sln.
+
+**** Usage ****
+
+Invoke src/Main/Release/DartThrowing without any arguments will tell you what arguments to use.
 
 Here is a typical usage scenario for 2 dimension, 3 category of samples, and r values (i.e. density) for the 3 categories = (0.04 0.02 0.01).
 
@@ -24,3 +33,9 @@ src/Main/Release/DartThrowing $dimension $num_categories $r_values $k_value $dom
 
 Code:
 Main/DartThrowing.cpp demonstrates how to use my code. It should be very simple. I plan to update my paper draft to explain this simple algorithm soon.
+
+For other stuff, take a look at Scripts/regress.sh (regression code per glorious NVIDIA tradition).
+
+**** Disclaimer ****
+You are on your own if you use my code. I am pretty confident about my code quality, but I cannot guarantee anything.
+
