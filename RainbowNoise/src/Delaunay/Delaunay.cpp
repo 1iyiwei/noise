@@ -6,13 +6,17 @@
 
 */
 
-#include "Delaunay.hpp"
-#include "Exception.hpp"
+#include <sstream>
+using namespace std;
 
 #include <math.h>
 #include <assert.h>
 
-Delaunay::Delaunay(const Point2D & a, const Point2D & b, const Point2D & c) : _starting_edge(0)
+#include "Delaunay.hpp"
+#include "Math2D.hpp"
+#include "Exception.hpp"
+
+void Delaunay::Construct(const Point2D & a, const Point2D & b, const Point2D & c)
 {
     Point2D *da, *db, *dc;
     da = new Point2D(a), db = new Point2D(b), dc = new Point2D(c);
@@ -33,8 +37,8 @@ Delaunay::Delaunay(const Point2D & a, const Point2D & b, const Point2D & c) : _s
     
     _starting_edge = ea;
 }
-
-Delaunay::Delaunay(const Real x_min, const Real x_max, const Real y_min, const Real y_max) : _starting_edge(0)
+    
+void Delaunay::Construct(const Real x_min, const Real x_max, const Real y_min, const Real y_max)
 {
     Point2D *d0, *d1, *d2, *d3;
     d0 = new Point2D(x_min, y_min, Point2D::ANCHOR);
@@ -72,6 +76,26 @@ Delaunay::Delaunay(const Real x_min, const Real x_max, const Real y_min, const R
     _starting_edge = e0;
 }
 
+Delaunay::Delaunay(const Point2D & a, const Point2D & b, const Point2D & c) : _starting_edge(0), _very_small(_VERY_SMALL)
+{
+    Construct(a, b, c);
+}
+
+Delaunay::Delaunay(const Real x_min, const Real x_max, const Real y_min, const Real y_max) : _starting_edge(0), _very_small(_VERY_SMALL)
+{
+    Construct(x_min, x_max, y_min, y_max);
+}
+
+Delaunay::Delaunay(const Point2D & a, const Point2D & b, const Point2D & c, const Real very_small) : _starting_edge(0), _very_small(very_small)
+{
+    Construct(a, b, c);
+}
+
+Delaunay::Delaunay(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small) : _starting_edge(0), _very_small(very_small)
+{
+    Construct(x_min, x_max, y_min, y_max);
+}
+
 Delaunay::~Delaunay(void)
 {
     for(unsigned int i = 0; i < _edges.size(); i++)
@@ -100,19 +124,75 @@ void Delaunay::GetEdges(vector<const QuadEdge::Edge * > & edges) const
     }
 }
 
-int Delaunay::InsertSite(Point2D & x)
+bool Delaunay::NearestSite(const Point2D & query, Point2D & result) const
+{
+    QuadEdge::Edge* e = Locate(query);
+
+    bool found = false;
+
+    if(e == 0)
+    {
+        return false;
+    }
+    else if(OnEdge(query, e))
+    {
+        Real min_dist = 1.0/sin(0.0);
+
+        for(int i = 0; i < 2; i++)
+        {
+            const Point2D & point = (i == 0 ? GetOrigin(e) : GetDestination(e));
+
+            Real dist = Math2D::Distance2(query, point);
+
+            if((dist < min_dist) && (point.category != Point2D::ANCHOR))
+            {
+                found = true;
+                result = point;
+                min_dist = dist;
+            }
+        }
+    }
+    else
+    {
+        Real min_dist = 1.0/sin(0.0);
+
+        QuadEdge::Edge* e_start = e;
+        do
+        {
+            const Point2D & point = GetOrigin(e);
+
+            Real dist = Math2D::Distance2(query, point);
+
+            if((dist < min_dist) && (point.category != Point2D::ANCHOR))
+            {
+                found = true;
+                result = point;
+                min_dist = dist;
+            }
+
+            e = e->Lnext();
+        }
+        while(e != e_start);
+    }
+
+    _starting_edge = e;
+
+    return found;
+}
+
+Delaunay::InsertStatus Delaunay::InsertSite(Point2D & x)
 {
     QuadEdge::Edge* e = Locate(x);
 
     if(e == 0)
     {
-        return 0;
+        return INSERT_FAIL;
     }
 
-    if((x == GetOrigin(e)) || (x == GetDestination(e)))
+    if(x.Equal(GetOrigin(e), _very_small) || x.Equal(GetDestination(e), _very_small))
     {
         // point is already in
-        return 1;
+        return INSERT_DUPLICATE;
     }
     else if(OnEdge(x, e))
     {
@@ -121,7 +201,7 @@ int Delaunay::InsertSite(Point2D & x)
     }
 
     // Connect the new point to the vertices of the containing triangle
-    // (or quadrilateral, if the new point fell on anexisting edge.)
+    // (or quadrilateral, if the new point fell on an existing edge.)
     QuadEdge::Edge* base = MakeEdge();
     base->SetEndPoints(&GetOrigin(e), &x);
     QuadEdge::Splice(base, e);
@@ -146,7 +226,7 @@ int Delaunay::InsertSite(Point2D & x)
         else if (e->Onext() == _starting_edge)
         {
             // no more suspect edges
-            return 1;
+            return INSERT_OK;
         }
         else
         {
@@ -157,28 +237,36 @@ int Delaunay::InsertSite(Point2D & x)
     while(1);
 
     throw Exception("this should never be reached");
-    return 0;
+    return INSERT_FAIL;
 }
 
-QuadEdge::Edge * Delaunay::Locate(const Point2D & x)
+QuadEdge::Edge * Delaunay::Locate(const Point2D & point) const
 {
     QuadEdge::Edge* e = _starting_edge;
 
-    while(1)
+    unsigned int count = 0;
+    while(count <= _edges.size())
     {
-        if(x == GetOrigin(e) || x == GetDestination(e))
+        count++;
+
+        if(point.Equal(GetOrigin(e), _very_small) || point.Equal(GetDestination(e), _very_small))
             return e;
-        else if (RightOf(x, e))
+        else if (RightOf(point, e))
             e = e->Sym();
-        else if (!RightOf(x, e->Onext()))
+        else if (!RightOf(point, e->Onext()))
             e = e->Onext();
-        else if (!RightOf(x, e->Dprev()))
+        else if (!RightOf(point, e->Dprev()))
             e = e->Dprev();
         else
             return e;
     }
     
-    throw Exception("this should never be reached");
+#if 0
+    stringstream message;
+    message << "(" << point.x << ", " << point.y << ")";
+    throw Exception("Delaunay::Locate(): potential infinite loop for " + message.str());
+#endif
+
     return 0;     
 }
 
@@ -230,18 +318,18 @@ int Delaunay::LeftOf(const Point2D & x, const QuadEdge::Edge * e)
     return ccw(x, GetOrigin(e), GetDestination(e));
 }
 
-int Delaunay::OnEdge(const Point2D & x, const QuadEdge::Edge * e)
+int Delaunay::OnEdge(const Point2D & x, const QuadEdge::Edge * e) const
 {
     Real t1, t2, t3;
     t1 = (x - GetOrigin(e)).norm();
     t2 = (x - GetDestination(e)).norm();
-    if(t1 < EPS || t2 < EPS)
+    if(t1 < _very_small || t2 < _very_small)
         return 1;
     t3 = (GetOrigin(e) - GetDestination(e)).norm();
     if (t1 > t3 || t2 > t3)
         return 0;
     Line line(GetOrigin(e), GetDestination(e));
-    return (fabs(line.eval(x)) < EPS); 
+    return (fabs(line.eval(x)) < _very_small);
 }
 
 const Delaunay::Point2D & Delaunay::GetOrigin(const QuadEdge::Edge * e)
@@ -382,6 +470,11 @@ Delaunay::Vector2D::Vector2D(void) : x(0), y(0)
     // nothing to do
 }
 
+Delaunay::Vector2D::Vector2D(const Point2D & point) : x(point.x), y(point.y)
+{
+    // nothing to do
+}
+
 Delaunay::Vector2D::Vector2D(const Real a, const Real b) : x(a), y(b)
 {
     // nothing to do
@@ -412,9 +505,9 @@ Delaunay::Vector2D Delaunay::Vector2D::operator-(const Vector2D & v) const
     return Vector2D(x - v.x, y - v.y);
 }
 
-Delaunay::Vector2D Delaunay::Vector2D::operator*(Real c, const Vector2D & v)
+Delaunay::Vector2D /*Delaunay::Vector2D::*/operator*(Delaunay::Real c, const Delaunay::Vector2D & v)
 {
-    return Vector2D(c * v.x, c * v.y);
+    return Delaunay::Vector2D(c * v.x, c * v.y);
 }
 
 Delaunay::Real Delaunay::Vector2D::dot(const Vector2D & a, const Vector2D & b)
@@ -423,6 +516,11 @@ Delaunay::Real Delaunay::Vector2D::dot(const Vector2D & a, const Vector2D & b)
 }
      
 Delaunay::Point2D::Point2D(void) : x(0), y(0), category(FREE), id(-1)
+{
+    // nothing to do
+}
+
+Delaunay::Point2D::Point2D(const Vector2D & vector) : x(vector.x), y(vector.y), category(FREE), id(-1)
 {
     // nothing to do
 }
@@ -457,9 +555,16 @@ Delaunay::Vector2D Delaunay::Point2D::operator-(const Point2D & p) const
     return Vector2D(x - p.x, y - p.y);
 }
 
+#if 0
 int Delaunay::Point2D::operator==(const Point2D & p) const
 {
-    return ((*this - p).norm() < EPS);
+    return ((*this - p).norm() < _very_small);
+}
+#endif
+
+bool Delaunay::Point2D::Equal(const Point2D & p, const Real very_small) const
+{
+    return ((*this - p).norm() < very_small);
 }
 
 Delaunay::Line::Line(void) : _a(0), _b(0), _c(0)
@@ -481,10 +586,25 @@ Delaunay::Real Delaunay::Line::eval(const Point2D & p) const
     return (_a * p.x + _b* p.y + _c);
 }
 
-int Delaunay::Line::classify(const Point2D & p) const
+int Delaunay::Line::classify(const Point2D & p, const Real very_small) const
 {
     Real d = eval(p);
-    return (d < -EPS) ? -1 : (d > EPS ? 1 : 0);
+    return (d < -very_small) ? -1 : (d > very_small ? 1 : 0);
 }
 
-const Delaunay::Real Delaunay::EPS = 1e-6;
+Delaunay::AABB::AABB(void): x_min(0), x_max(0), y_min(0), y_max(0)
+{
+    // nothing else to do
+}
+
+Delaunay::AABB::AABB(Real x_min_input, const Real x_max_input, const Real y_min_input, const Real y_max_input): x_min(x_min_input), x_max(x_max_input), y_min(y_min_input), y_max(y_max_input)
+{
+    // nothing else to do
+}
+
+bool Delaunay::AABB::Inside(const Point2D &p) const
+{
+    return (p.x >= x_min && p.x <= x_max && p.y >= y_min && p.y <= y_max);
+}
+
+const Delaunay::Real Delaunay::_VERY_SMALL = 1e-15;

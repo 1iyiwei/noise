@@ -12,14 +12,15 @@
 #include <string>
 using namespace std;
 
-#include "Delaunay.hpp"
+#include "DelaunayMesh.hpp"
 
 class LloydRelaxation
 {
 public:
     typedef Delaunay::Real Real;
     typedef Delaunay::Point2D Point2D;
-    typedef enum {NONE, TOROIDAL} BoundaryCondition;
+    typedef DelaunayMesh::BoundaryCondition BoundaryCondition;
+    typedef Delaunay::Vector2D Vector2D;
 
     // give a bunch of points
     // perform relaxation once to determine the points' new positions
@@ -28,6 +29,7 @@ public:
     // the caller will own the output points
     // return "" if OK, or error message
     static string RunOnce(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const vector<Point2D *> & points);
+    static string RunOnce(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const vector<Point2D *> & points);
 
     struct VoronoiRegion
     {
@@ -38,13 +40,23 @@ public:
     // compute the Voronoi regions
     static string Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const vector<const Point2D *> & points, vector<VoronoiRegion> & output);
 
+    static string Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const vector<const Point2D *> & points, vector<VoronoiRegion> & output);
+
+    static string Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const bool with_clone, const vector<const Point2D *> & points, vector<VoronoiRegion> & output);
+
+    static string Centroid(const VoronoiRegion & region, Point2D & centroid);
+
+    static Real Area(const VoronoiRegion & region);
+
     // snap the set of points to snappers
     // i.e. the allowable set of sample poisitions is discrete
     static string Snap(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const vector<Point2D *> & points, const vector<const Point2D *> & snappers);
 
+    // compute the largest empty circle in from the Voronoi diagram
+    static string LargestEmptyCircle(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const vector<VoronoiRegion> &regions, Real &x, Real &y, Real &radius);
+
 protected:
-    static Real Distance(const Point2D & p1, const Point2D & p2);
-    static Real Distance(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const Point2D & p1, const Point2D & p2);
+    static Real Distance2(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const Point2D & p1, const Point2D & p2);
 
     static int Centroid(const Point2D & center, const vector<const Point2D *> & neighbors, Point2D & centroid);
     
@@ -52,8 +64,11 @@ protected:
     
     static int Centroid(const vector<Point2D *> & polygon, Point2D & centroid);
 
-    static Real Angle(const Point2D & point);
+    // clip points outside the domain
+    // return number of points clipped, negative for error
+    static int Clip(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, vector<Point2D *> & points);
 
+protected:
     struct Sortie
     {
         Sortie(void) : index(0), value(0) {};
@@ -65,7 +80,9 @@ protected:
         Real value;
     };
 
-    static Real Perturb(const Real value, const Real minimum, const Real maximum);
+    static Real Perturb(const Real value, const Real minimum, const Real maximum, const Real very_small);
+
+    static const Real _VERY_SMALL;
 };
 
 #endif

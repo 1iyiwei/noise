@@ -214,7 +214,7 @@ int Main(int argc, char **argv)
 
             vector<LloydRelaxation::VoronoiRegion> regions;
 
-            const string message = LloydRelaxation::Voronoi(region[0], region[1], region[2], region[3], LloydRelaxation::TOROIDAL, p_points, regions);
+            const string message = LloydRelaxation::Voronoi(region[0], region[1], region[2], region[3], DelaunayMesh::TOROIDAL, p_points, regions);
 
             if(message != "")
             {

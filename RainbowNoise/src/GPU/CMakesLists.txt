@@ -1,0 +1,17 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+PROJECT(RainbowNoiseGPU)
+
+SET(SOURCE_FILES
+CleanseObjectAlpha.cpp
+DrawObjects.cpp
+)
+
+# library path
+INCLUDE_DIRECTORIES(${RainbowNoise_SOURCE_DIR}/Library)
+LINK_DIRECTORIES(${RainbowNoise_BINARY_DIR}/Library)
+
+# Create the executable target
+ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCE_FILES})
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} Library)

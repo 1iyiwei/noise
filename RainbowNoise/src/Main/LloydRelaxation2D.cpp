@@ -37,7 +37,7 @@ int Main(int argc, char **argv)
     const float x_min = 0; const float x_max = atof(argv[++argCtr]);
     const float y_min = 0; const float y_max = atof(argv[++argCtr]);
     const int num_iterations = atoi(argv[++argCtr]);
-    const LloydRelaxation::BoundaryCondition boundary_condition = LloydRelaxation::TOROIDAL;
+    const LloydRelaxation::BoundaryCondition boundary_condition = DelaunayMesh::TOROIDAL;
 
     // read in points
     ifstream input(input_file_name); // read in samples
