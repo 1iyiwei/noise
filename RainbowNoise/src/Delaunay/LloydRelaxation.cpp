@@ -6,16 +6,19 @@
 
 */
 
-#include "LloydRelaxation.hpp"
-#include "SequentialCounter.hpp"
-#include "Exception.hpp"
-
 #include <iostream>
+#include <sstream>
 #include <algorithm>
 using namespace std;
 
 #include <math.h>
 #include <assert.h>
+
+#include "LloydRelaxation.hpp"
+#include "SequentialCounter.hpp"
+#include "Math2D.hpp"
+#include "Random.hpp"
+#include "Exception.hpp"
 
 template <class T>
 T mod(const T a, const T b)
@@ -25,6 +28,11 @@ T mod(const T a, const T b)
 
 string LloydRelaxation::RunOnce(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const vector<Point2D *> & input)
 {
+    return RunOnce(x_min, x_max, y_min, y_max, _VERY_SMALL, boundary_condition, input);
+}
+
+string LloydRelaxation::RunOnce(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const vector<Point2D *> & input)
+{
     // error checking
     for(unsigned int i = 0; i < input.size(); i++)
     {
@@ -33,73 +41,30 @@ string LloydRelaxation::RunOnce(const Real x_min, const Real x_max, const Real y
             return "null input point";
         }
 
-        input[i]->x = Perturb(input[i]->x, x_min, x_max);
-        input[i]->y = Perturb(input[i]->y, y_min, y_max);
+        input[i]->x = Perturb(input[i]->x, x_min, x_max, very_small);
+        input[i]->y = Perturb(input[i]->y, y_min, y_max, very_small);
     }
 
-    // compute delaunay triangulation of cloned output points
-    vector<Point2D *> output(input.size());
-    for(unsigned int i = 0; i < output.size(); i++)
-    {
-        output[i] = input[i]->Clone();
-        assert(output[i]);
-    }
+    DelaunayMesh dmesh(DelaunayMesh::Box(x_min, x_max, y_min, y_max), very_small, boundary_condition, input);
 
-    // for toroidal boundary condition only
-    vector<Point2D *> clone;
-    if(boundary_condition == TOROIDAL)
-    {
-        for(unsigned int i = 0; i < input.size(); i++)
-        {
-            for(int row = -1; row <= 1; row++)
-                for(int col = -1; col <= 1; col++)
-                {
-                    if((row != 0) || (col != 0)) // skip output itself
-                    {
-                        Point2D * baby = input[i]->Clone();
-
-                        baby->x += row*(x_max-x_min);
-                        baby->y += col*(y_max-y_min);
-
-                        clone.push_back(baby);
-                    }
-                }
-        }
-    }
-
-    Delaunay * mesh = 0;
-
-    if(boundary_condition == TOROIDAL)
-    {
-        mesh = new Delaunay(2*x_min - x_max, 2*x_max - x_min, 2*y_min - y_max, 2*y_max - y_min);
-    }
-    else
-    {
-        mesh = new Delaunay(x_min, x_max, y_min, y_max);
-    }
-
-    for(unsigned int i = 0; i < output.size(); i++)
-    {
-        if(! mesh->InsertSite(*output[i]))
-        {
-            return "cannot insert site";
-        }
-    }
-    for(unsigned int i = 0; i < clone.size(); i++)
-    {
-        if(! mesh->InsertSite(*clone[i]))
-        {
-            return "cannot insert site";
-        }
-    }
+    Delaunay * mesh = dmesh.Mesh();
+    vector<Point2D *> output = dmesh.Vertices();
 
     // compute voronoi centroid into input points
     for(unsigned int i = 0; i < output.size(); i++)
     {
+        if(output[i]->category == Point2D::ORPHAN)
+        {
+            // assume output.size() == input.size();
+            input[i]->category = output[i]->category;
+            continue;
+        }
+
         if(output[i]->NumEdgeRings() != 1)
         {
-            cerr << "output[" << i << "]->NumEdgeRings() " << output[i]->NumEdgeRings() << endl;
-            return "NumEdgeRings() != 1";
+            stringstream message;
+            message << "RunOnce(): output[" << i << "]->NumEdgeRings() == " << output[i]->NumEdgeRings() << " != 1 (" << output[i]->id << "," << output[i]->x << ", " << output[i]->y << ")";
+            return message.str();
         }
 
         vector<const Point2D *> neighbors;
@@ -144,7 +109,7 @@ string LloydRelaxation::RunOnce(const Real x_min, const Real x_max, const Real y
         // bring it back into range
         if((centroid.x < x_min) || (centroid.x > x_max) || (centroid.y < y_min) || (centroid.y > y_max))
         {
-            if(boundary_condition == TOROIDAL)
+            if(boundary_condition == DelaunayMesh::TOROIDAL)
             {
                 input[i]->x = mod(centroid.x, x_max-x_min) + x_min; 
                 input[i]->y = mod(centroid.y, y_max-y_min) + y_min;
@@ -164,38 +129,35 @@ string LloydRelaxation::RunOnce(const Real x_min, const Real x_max, const Real y
         // check to see if out of range
         if((input[i]->x < x_min) || (input[i]->x > x_max) || (input[i]->y < y_min) || (input[i]->y > y_max))
         {
-            cerr << "out of range (" << input[i]->x << ", " << input[i]->y << "), neighbors " << neighbors.size() << " :";
+            stringstream message;
+
+            message << "out of range (" << input[i]->x << ", " << input[i]->y << "), neighbors " << neighbors.size() << " :";
             for(unsigned int j = 0; j < neighbors.size(); j++)
             {
-                cerr << " (" << neighbors[j]->x << ", " << neighbors[j]->y << ")";
+                message << " (" << neighbors[j]->x << ", " << neighbors[j]->y << ")";
             }
-            cerr << endl;
+            message << endl;
             
-            throw Exception("point out of range");
+            throw Exception(message.str() + "point out of range");
         }
 #endif
     }
-    
-    // clean up
-    delete mesh;
-
-    for(unsigned int i = 0; i < output.size(); i++)
-    {
-        delete output[i];
-    }
-    output.clear();
-
-    for(unsigned int i = 0; i < clone.size(); i++)
-    {
-        delete clone[i];
-    }
-    clone.clear();
     
     // done
     return "";
 }
 
 string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const vector<const Point2D *> & input, vector<VoronoiRegion> & regions)
+{
+    return Voronoi(x_min, x_max, y_min, y_max, _VERY_SMALL, boundary_condition, true, input, regions);
+}
+
+string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const vector<const Point2D *> & input, vector<VoronoiRegion> & regions)
+{
+    return Voronoi(x_min, x_max, y_min, y_max, very_small, boundary_condition, true, input, regions);
+}
+
+string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, const BoundaryCondition boundary_condition, const bool with_clone, const vector<const Point2D *> & input, vector<VoronoiRegion> & regions)
 {
     // error checking
     for(unsigned int i = 0; i < input.size(); i++)
@@ -206,75 +168,37 @@ string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y
         }
     }
 
-    // compute delaunay triangulation of cloned output points
-    vector<Point2D *> output(input.size());
-    for(unsigned int i = 0; i < output.size(); i++)
-    {
-        output[i] = input[i]->Clone();
-        assert(output[i]);
-    }
+    DelaunayMesh dmesh(DelaunayMesh::Box(x_min, x_max, y_min, y_max), very_small, boundary_condition, input);
 
-    // for toroidal boundary condition only
-    vector<Point2D *> clone;
-    if(boundary_condition == TOROIDAL)
+    Delaunay * mesh = dmesh.Mesh();
+    vector<Point2D *> output = dmesh.Vertices();
+    vector<Point2D *> clone = dmesh.Clones();
+    DelaunayMesh::Box box = dmesh.OuterBox();
+
+    const Real local_x_min = box.x_min;
+    const Real local_x_max = box.x_max;
+    const Real local_y_min = box.y_min;
+    const Real local_y_max = box.y_max;
+
+    if(0)
     {
-        for(unsigned int i = 0; i < input.size(); i++)
+        // clip
+        if( Clip(local_x_min, local_x_max, local_y_min, local_y_max, very_small, output) < 0)
         {
-            for(int row = -1; row <= 1; row++)
-                for(int col = -1; col <= 1; col++)
-                {
-                    if((row != 0) || (col != 0)) // skip output itself
-                    {
-                        Point2D * baby = input[i]->Clone();
+            return "error in clipping";
+        }
 
-                        baby->x += row*(x_max-x_min);
-                        baby->y += col*(y_max-y_min);
-
-                        clone.push_back(baby);
-                    }
-                }
+        if( Clip(local_x_min, local_x_max, local_y_min, local_y_max, very_small, clone) < 0)
+        {
+            return "error in clipping";
         }
     }
 
-    Delaunay * mesh = 0;
-
-#if 1
-    const Real local_x_min = (boundary_condition == TOROIDAL ? 2*x_min - x_max : x_min);
-    const Real local_x_max = (boundary_condition == TOROIDAL ? 2*x_max - x_min : x_max);
-    const Real local_y_min = (boundary_condition == TOROIDAL ? 2*y_min - y_max : y_min);
-    const Real local_y_max = (boundary_condition == TOROIDAL ? 2*y_max - y_min : y_max);
-
-    mesh = new Delaunay(local_x_min, local_x_max, local_y_min, local_y_max);
-#else
-    if(boundary_condition == TOROIDAL)
+    if(with_clone)
     {
-        mesh = new Delaunay(2*x_min - x_max, 2*x_max - x_min, 2*y_min - y_max, 2*y_max - y_min);
+        output.insert(output.end(), clone.begin(), clone.end());
+        clone.clear();
     }
-    else
-    {
-        mesh = new Delaunay(x_min, x_max, y_min, y_max);
-    }
-#endif
-
-    for(unsigned int i = 0; i < input.size(); i++)
-    {
-        if(! mesh->InsertSite(*output[i]))
-        {
-            return "cannot insert site";
-        }
-    }
-    for(unsigned int i = 0; i < clone.size(); i++)
-    {
-        if(! mesh->InsertSite(*clone[i]))
-        {
-            return "cannot insert site";
-        }
-    }
-
-#if 1
-    output.insert(output.end(), clone.begin(), clone.end());
-    clone.clear();
-#endif
 
     regions.clear();
     VoronoiRegion region;
@@ -282,10 +206,13 @@ string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y
     // compute voronoi regions
     for(unsigned int i = 0; i < output.size(); i++)
     {
+        if(output[i]->category == Point2D::ORPHAN) continue;
+
         if(output[i]->NumEdgeRings() != 1)
         {
-            cerr << "output[" << i << "]->NumEdgeRings() " << output[i]->NumEdgeRings() << endl;
-            return "NumEdgeRings() != 1";
+            stringstream message;
+            message << "Voronoi(): output[" << i << "]->NumEdgeRings() == " << output[i]->NumEdgeRings() << " != 1 (" << output[i]->id << "," << output[i]->x << ", " << output[i]->y << ")";
+            return message.str();
         }
 
         vector<const Point2D *> neighbors;
@@ -320,7 +247,7 @@ string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y
             for(unsigned int j = 0; j < sorties.size(); j++)
             {
                 sorties[j].index = j;
-                sorties[j].value = Angle(Point2D(neighbors_input[j]->x-center.x, neighbors_input[j]->y-center.y)); 
+                sorties[j].value = Math2D::Angle(Point2D(neighbors_input[j]->x-center.x, neighbors_input[j]->y-center.y)); 
             }
             sort(sorties.begin(), sorties.end());
         
@@ -365,27 +292,90 @@ string LloydRelaxation::Voronoi(const Real x_min, const Real x_max, const Real y
             }
         }
 
-        if(!any_neighbor_local_region_corner && !any_voronoi_vertex_outside_region)
+        bool center_outside_domain = !((region.center.x >= x_min) && (region.center.x <= x_max) && (region.center.y >= y_min) && (region.center.y <= y_max));
+
+        if(!with_clone || (!any_neighbor_local_region_corner && (!any_voronoi_vertex_outside_region/* || (boundary_condition == NONE)*/) && !center_outside_domain))
         {
             regions.push_back(region);
         }
     }
 
-    // clean up
-    delete mesh;
+    // done
+    return "";
+}
 
-    for(unsigned int i = 0; i < output.size(); i++)
-    {
-        delete output[i];
-    }
-    output.clear();
+string LloydRelaxation::Centroid(const VoronoiRegion & region, Point2D & centroid)
+{
+    vector<Point2D *> neighbors(region.ring.size());
 
-    for(unsigned int i = 0; i < clone.size(); i++)
+    for(unsigned int i = 0; i < neighbors.size(); i++)
     {
-        delete clone[i];
+        neighbors[i] = const_cast<Point2D *>(&region.ring[i]);
     }
-    clone.clear();
-    
+
+    if(!Centroid(neighbors, centroid))
+    {
+        return "error";
+    }
+    else
+    {
+        return "";
+    }
+}
+
+LloydRelaxation::Real LloydRelaxation::Area(const VoronoiRegion & region)
+{
+    Real area = 0;
+
+    const vector<Point2D> & polygon = region.ring;
+
+    for(unsigned int i = 0; i < polygon.size(); i++)
+    {
+        const int j = (i+1)%polygon.size();
+
+        const Delaunay::Point2D & polygon_i = polygon[i];
+        const Delaunay::Point2D & polygon_j = polygon[j];
+        
+        const Real ai = polygon_i.x*polygon_j.y - polygon_j.x*polygon_i.y;
+        area += ai;
+    }
+
+    area /= 2;
+
+    return area;
+}
+
+string LloydRelaxation::LargestEmptyCircle(const Real x_min, const Real x_max, const Real y_min, const Real y_max,
+    const vector<VoronoiRegion> &regions, Real &x, Real &y, Real &radius)
+{
+    radius = -1.0;
+
+    Delaunay::AABB aabb(x_min, x_max, y_min, y_max);
+
+    // TODO: Remove the repeated computation due to vertices shared by multiple regions
+    for (unsigned int i = 0; i < regions.size(); ++i)
+    {
+        if (!aabb.Inside(regions[i].center))
+        {
+            continue;
+        }
+        for (unsigned int j = 0; j < regions[i].ring.size(); ++j)
+        {
+            if (!aabb.Inside(regions[i].ring[j]))
+            {
+                continue;
+            }
+
+            Real r = (regions[i].ring[j] - regions[i].center).norm();
+            if (r > radius)
+            {
+                radius = r;
+                x = regions[i].ring[j].x;
+                y = regions[i].ring[j].y;
+            }
+        }
+    }
+
     // done
     return "";
 }
@@ -408,11 +398,11 @@ string LloydRelaxation::Snap(const Real x_min, const Real x_max, const Real y_mi
     for(unsigned int i = 0; i < points.size(); i++)
     {
         int min_index = 0;
-        Real min_distance = Distance(x_min, x_max, y_min, y_max, boundary_condition, *points[i], *snappers[min_index]);
+        Real min_distance = Distance2(x_min, x_max, y_min, y_max, boundary_condition, *points[i], *snappers[min_index]);
 
         for(unsigned int j = 1; j < snappers.size(); j++)
         {
-            const Real distance = Distance(x_min, x_max, y_min, y_max, boundary_condition, *points[i], *snappers[j]);
+            const Real distance = Distance2(x_min, x_max, y_min, y_max, boundary_condition, *points[i], *snappers[j]);
 
             if(distance < min_distance)
             {
@@ -429,23 +419,16 @@ string LloydRelaxation::Snap(const Real x_min, const Real x_max, const Real y_mi
     return "";
 }
 
-LloydRelaxation::Real LloydRelaxation::Distance(const Point2D & p1, const Point2D & p2)
+LloydRelaxation::Real LloydRelaxation::Distance2(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const Point2D & p1, const Point2D & p2)
 {
-    const Real x_diff = p1.x - p2.x;
-    const Real y_diff = p1.y - p2.y;
-    return x_diff*x_diff + y_diff*y_diff;
-}
-
-LloydRelaxation::Real LloydRelaxation::Distance(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const BoundaryCondition boundary_condition, const Point2D & p1, const Point2D & p2)
-{
-    if(boundary_condition == NONE)
+    if(boundary_condition == DelaunayMesh::NONE)
     {
-        return Distance(p1, p2);
+        return Math2D::Distance2(p1, p2);
     }
-    else if(boundary_condition == TOROIDAL)
+    else if(boundary_condition == DelaunayMesh::TOROIDAL)
     {
         SequentialCounter counter(2, -1, 1);
-        Real min_distance = Distance(p1, p2);
+        Real min_distance = Math2D::Distance2(p1, p2);
 
         vector<int> index(2);
 
@@ -459,7 +442,7 @@ LloydRelaxation::Real LloydRelaxation::Distance(const Real x_min, const Real x_m
             proxy.x = p1.x + index[0]*(x_max - x_min);
             proxy.y = p1.y + index[1]*(y_max - y_min);
 
-            Real distance = Distance(proxy, p2);
+            Real distance = Math2D::Distance2(proxy, p2);
 
             if(distance < min_distance)
             {
@@ -477,9 +460,6 @@ LloydRelaxation::Real LloydRelaxation::Distance(const Real x_min, const Real x_m
     }
 }
 
-#include <iostream>
-using namespace std;
-
 int LloydRelaxation::Centroid(const Point2D & center, const vector<const Point2D *> & neighbors_input, Point2D & centroid)
 {
     // sort input neighbors in ccw order
@@ -487,7 +467,7 @@ int LloydRelaxation::Centroid(const Point2D & center, const vector<const Point2D
     for(unsigned int i = 0; i < sorties.size(); i++)
     {
         sorties[i].index = i;
-        sorties[i].value = Angle(Point2D(neighbors_input[i]->x-center.x, neighbors_input[i]->y-center.y)); 
+        sorties[i].value = Math2D::Angle(Point2D(neighbors_input[i]->x-center.x, neighbors_input[i]->y-center.y)); 
     }
     sort(sorties.begin(), sorties.end());
     
@@ -506,7 +486,7 @@ int LloydRelaxation::Centroid(const Point2D & center, const vector<const Point2D
         
         for(unsigned int i = 0; i < angles.size(); i++)
         {
-            angles[i] = Angle(Point2D(neighbors[i]->x-center.x, neighbors[i]->y-center.y)); 
+            angles[i] = Math2D::Angle(Point2D(neighbors[i]->x-center.x, neighbors[i]->y-center.y)); 
         }
 
         Real min_angle = 2*2*acos(-1.0);
@@ -534,14 +514,15 @@ int LloydRelaxation::Centroid(const Point2D & center, const vector<const Point2D
 
         if(not_sorted)
         {
-            cerr << "angles " << angles.size() << ":";
+            stringstream message;
+            message << "angles " << angles.size() << ":";
             for(unsigned int i = 0; i < angles.size(); i++)
             {
-                cerr << " " << angles[i];
+                message << " " << angles[i];
             }
-            cerr << endl;
+            message << endl;
 
-            throw Exception("neighbors not ordered in LloydRelaxation::Centroid()");
+            throw Exception(message.str() + "neighbors not ordered in LloydRelaxation::Centroid()");
         }
     }
 #endif
@@ -565,13 +546,17 @@ int LloydRelaxation::Centroid(const Point2D & center, const vector<const Point2D
     // debug
     if(1)
     {
-        cerr << "centroid (" << centroid.x-center.x << ", " << centroid.y-center.y << "), polygon " << polygon.size() << " :";
+        stringstream message;
+
+        message << "centroid (" << centroid.x-center.x << ", " << centroid.y-center.y << "), polygon " << polygon.size() << " :";
 
         for(unsigned int i = 0; i < polygon.size(); i++)
         {
-            cerr << " (" << polygon[i]->x-center.x << ", " << polygon[i]->y-center.y << ")";
+            message << " (" << polygon[i]->x-center.x << ", " << polygon[i]->y-center.y << ")";
         }
-        cerr << endl;
+        message << endl;
+
+        cerr << message;
     }
 #endif
     
@@ -604,8 +589,21 @@ int LloydRelaxation::VoronoiVertex(const Point2D & c, const Point2D & n0, const 
     }
     else
     {
+#if 1
+        // for 3 co-linear points, simply pick the closer one as result
+        // not entirely correct, as we need to check consecutive co-linears
+        if(Math2D::Distance2(c, h0) > Math2D::Distance2(c, h1))
+        {
+            result = h1;
+        }
+        else
+        {
+            result = h0;
+        }
+#else
         throw Exception("null det in LloydRelaxation::VoronoiVertex()");
         return 0;
+#endif
     }
     
     return 1;
@@ -650,32 +648,62 @@ int LloydRelaxation::Centroid(const vector<Point2D *> & polygon, Point2D & centr
     }
 }
 
-LloydRelaxation::Real LloydRelaxation::Angle(const Point2D & point)
+int LloydRelaxation::Clip(const Real x_min, const Real x_max, const Real y_min, const Real y_max, const Real very_small, vector<Point2D *> & input)
 {
-    Delaunay::Vector2D normalized(point.x, point.y);
-    normalized.normalize();
-    
-    return (normalized.y >= 0 ? acos(normalized.x) : 2*acos(-1.0)-acos(normalized.x));
+    vector<Point2D *> output;
+
+    const Real x_delta = fabs((x_max - x_min)*very_small);
+    const Real y_delta = fabs((y_max - y_min)*very_small);
+
+    for(unsigned int i = 0; i < input.size(); i++)
+    {
+        const Point2D & point = *input[i];
+
+        if((point.x <= (x_min + x_delta)) || 
+           (point.x >= (x_max - x_delta)) || 
+           (point.y <= (y_min + y_delta)) || 
+           (point.y >= (y_max - y_delta)) )
+        {
+            delete input[i];
+            input[i] = 0;
+        }
+    }
+
+    for(unsigned int i = 0; i < input.size(); i++)
+    {
+        if(input[i])
+        {
+            output.push_back(input[i]);
+        }
+    }
+
+    const int kill_count = input.size() - output.size();
+
+    input = output;
+
+    return kill_count;
 }
 
-LloydRelaxation::Real LloydRelaxation::Perturb(const Real value, const Real minimum, const Real maximum)
+LloydRelaxation::Real LloydRelaxation::Perturb(const Real value, const Real minimum, const Real maximum, const Real very_small_ratio)
 {
-    const Real very_small = (maximum - minimum) * 10e-15;
+    const Real very_small = (maximum - minimum) * very_small_ratio;
     Real result = value;
 
-    if(result == floor(result))
+    //if(result == floor(result))
     {
         if((result-minimum) < (maximum-result))
         {
-            result += very_small;
+            result += very_small*(0.5*Random::UniformRandom()+0.5);
         }
         else
         { 
-            result -= very_small;
+            result -= very_small*(0.5*Random::UniformRandom()+0.5);
         }
 
-        cerr << "perturb " << value << " to " << result << endl;
+        // cerr << "perturb " << value << " to " << result << endl;
     }
 
     return result;
 }
+ 
+const LloydRelaxation::Real LloydRelaxation::_VERY_SMALL = 10e-15;
