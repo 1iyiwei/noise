@@ -7,9 +7,11 @@ INCLUDE(${PROJECT_SOURCE_DIR}/../../automation/custom/CopyScripts.cmake)
 
 # List all source files
 SET(SOURCE_FILES
+demo.sh
 discrete.sh
 do.sh
 draw_samples.sh
+fig2eps
 gpusamp.sh
 hku.sh
 lloyd.sh
