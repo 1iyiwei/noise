@@ -8,9 +8,7 @@ I put the code under a public svn (subversion) repository. This is easier for me
 svn co http://svn.liyiwei.org/public/BlueMath
 
 **** Compilation ****
-I compiled the code via Visual Studio .net 2003. The code should be compatible with later generation of Visual Studios, but I have not tried any of these.
-
-You should also build under the Script directory; I put a Makefile there.
+I compiled the code via Cmake, just run cnmake.bat (for Windows) or cgmake.sh (for linux) under the build directory.
 
 **** Run ****
 Take a look at src/Scripts/regress.sh to see examples on how to use the code.
