@@ -41,6 +41,7 @@ IsotropicWhiteNoise
 Jacobian
 JitterSamples
 LloydRelaxation2D
+MakeBlobs
 MakeImportance
 Math
 Matrix
