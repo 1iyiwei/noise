@@ -10,8 +10,6 @@
 #include <string>
 using namespace std;
 
-#include <stdlib.h>
-
 #include "MatrixWarp.hpp"
 #include "TerrainWarp.hpp"
 #include "HaarWarp.hpp"
@@ -39,8 +37,7 @@ int Main(int argc, char **argv)
 
     // input warp
 
-    Matrix * p_matrix_forward = 0;
-    Matrix * p_matrix_inverse = 0;
+    Matrix * p_matrix = 0;
     Warp * p_warp = 0;
 
     if(warp_option == "terrain")
@@ -67,60 +64,19 @@ int Main(int argc, char **argv)
 
         p_warp = new HaarWarp(importance, cell_size);
     }
-    else if(warp_option.find("matrix") != string::npos)
-    {
-        if((arg_ctr + 1) >= argc)
-        {
-            cerr << "not enough input arguments for matrix" << endl;
-            return 1;
-        }
-
-        const string matrixf_file_name = argv[++arg_ctr];
-
-        // forward warp matrix
-        Array<FrameBuffer::F2> forward;
-        if(!FrameBuffer::ReadF2M(matrixf_file_name, forward))
-        {
-            cerr << "cannot read from " << matrixf_file_name << endl;
-            return 1;
-        }
-
-        p_matrix_forward = new Matrix(forward);
-
-        if(warp_option.find("matrixfb") != string::npos)
-        {
-            if((arg_ctr + 1) >= argc)
-            {       
-                cerr << "not enough input arguments for matrixfb" << endl;
-                return 1;
-            }
-
-            const string matrixb_file_name = argv[++arg_ctr];
-
-            // inverse warp matrix
-            Array<FrameBuffer::F2> inverse;
-            if(!FrameBuffer::ReadF2M(matrixb_file_name, inverse))
-            {
-                cerr << "cannot read from " << matrixb_file_name << endl;
-                return 1;
-            }
-
-            p_matrix_inverse = new Matrix(inverse);
-        }
-
-        if(p_matrix_inverse != 0)
-        {
-            p_warp = new MatrixWarp(*p_matrix_forward, *p_matrix_inverse);
-        }
-        else
-        {
-            p_warp = new MatrixWarp(*p_matrix_forward);
-        }
-    }
     else
     {
-        cerr << "unknown warp option" << endl;
-        return 1;
+        // warp matrix
+        Array<FrameBuffer::F2> input;
+        if(!FrameBuffer::ReadF2M(warp_option, input))
+        {
+            cerr << "cannot read from " << warp_option << endl;
+            return 1;
+        }
+
+        p_matrix = new Matrix(input);
+
+        p_warp = new MatrixWarp(*p_matrix);
     }
 
     if(!p_warp) throw Exception("null warp");
@@ -173,16 +129,10 @@ int Main(int argc, char **argv)
         p_warp = 0;
     }
 
-    if(! p_matrix_forward)
+    if(! p_matrix)
     {
-        delete p_matrix_forward;
-        p_matrix_forward = 0;
-    }
-
-    if(! p_matrix_inverse)
-    {
-        delete p_matrix_inverse;
-        p_matrix_inverse = 0;
+        delete p_matrix;
+        p_matrix = 0;
     }
 
     // done
