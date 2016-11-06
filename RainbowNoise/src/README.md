@@ -1,15 +1,14 @@
-**** Access ****
-I put the code under a public svn (subversion) repository. This is easier for me to maintain than a binary zip file. Simply perform the following to get my source code:
+# Code #
 
-svn co http://svn.liyiwei.org/public/RainbowNoise
+Someday I will switch this to cmake......
 
-**** Compilation ****
+## Compilation ##
 
 I compiled the code via Visual Studio .net 2003. The code should be compatible with later generation of Visual Studios, but I have not tried any of these.
 
 See rainbow.sln.
 
-**** Usage ****
+## Usage ##
 
 Invoke src/Main/Release/DartThrowing without any arguments will tell you what arguments to use.
 
@@ -36,6 +35,6 @@ Main/DartThrowing.cpp demonstrates how to use my code. It should be very simple.
 
 For other stuff, take a look at Scripts/regress.sh (regression code per glorious NVIDIA tradition).
 
-**** Disclaimer ****
+## Disclaimer ##
 You are on your own if you use my code. I am pretty confident about my code quality, but I cannot guarantee anything.
 
