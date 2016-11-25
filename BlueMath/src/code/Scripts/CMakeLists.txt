@@ -16,6 +16,7 @@ SET(SOURCE_FILES
     mosaic.sh
     paper.sh
     regress.sh
+    retina.sh
     surface.sh
     test.sh
     transfer.sh
