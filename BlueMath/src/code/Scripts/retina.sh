@@ -42,6 +42,7 @@ set sft_freq = 128;
 @ sft_size = ${sft_freq} * 2;
 set sft_scale = ${sft_size};
 
+set clamp_radius = 2.5;
 set normalization_option = "sqrtsamplecount";
 
 foreach domain_option ("uniform" "1blob")
@@ -119,7 +120,7 @@ echo ${all_pfm_files} > ${output_dir}/all_pfm_files_list.txt;
 ${exe_dir}/RadialPlot ${output_dir}/all_pfm_files_list.txt ${output_dir}/${base_name}_average${num_runs}.pfm ${output_dir}/${base_name}_average${num_runs}_mean.txt ${output_dir}/${base_name}_average${num_runs}_variance.txt
 rm ${output_dir}/all_pfm_files_list.txt;
 
-${exe_dir}/PFM2PPM ${output_dir}/${base_name}_average${num_runs}.pfm ${output_dir}/${base_name}_average${num_runs}.ppm 1 1 0
+${exe_dir}/PFM3PPM ${output_dir}/${base_name}_average${num_runs}.pfm ${output_dir}/${base_name}_average${num_runs}.ppm 1 1 0 ${clamp_radius}
 ${convert} ${output_dir}/${base_name}_average${num_runs}.ppm ${output_dir}/${base_name}_average${num_runs}.png
 echo ${output_dir}/${base_name}_average${num_runs}.png
 
