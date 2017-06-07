@@ -1,0 +1,59 @@
+Some of the c programs work differently than their fortran counter
+parts. This results in differences in the test result on the same
+file. Most of the differences are insignificant. Following is the
+detail (In the following text, sqeez.f, ..., means sqeez, ..., test
+in diehard.f).
+
+1. The squeez.c stops squeezing after 48 trials while sqeez.f
+   continues until k is squeezed to 1. There should not be any
+   significant difference in the test result.
+
+2. The c programs convert the numbers from the input file into
+   unsigned integers between 0 to 2**32. The fortran programs 
+   convert them into integers between -2**31 to 2**31. This causes
+   differences in the result of some tests. But this difference 
+   should not be significant if these numbers are iid uniform. The 
+   affected tests are: craptest, 3dsphere test, .... 
+
+3. Mindist.f does not work correctly on SUN . It is supposed to sort vector 
+   x but it actually sorts y. After changes are made, it gives identical
+   result as mindist.c. Without change. it produces worng result.
+
+4. The way 3dsphere.c gets points is different from the way used by its 
+   fortan counterpart. The difference in test result is insignificant. 
+
+5. The p-values given by c programs are equal to 1 minus p-values given by
+   their fortran counterparts.  
+
+6. Binary matrix test 31, 32 and 6x8 are combined as binrnk(). For example 
+      binrnk(filename, "6x8")
+   will perform 6 x 8 test on filename. Other tests are called in the same
+   way. The result of 32x32 is slightly different from its fortran counter 
+   part. This is because 32x32 is called after 31x31 in fortran program. 
+   The file is closed and reopened. However, there are unused observations
+   from the previous test. So 32x32 does not read the file immediately to 
+   get obs.. The c program starts from the begining of the file whenever it 
+   is reopened. The difference is insignificant. It exists in all tests that
+   reopen files when it is executed.
+
+7. The differences between c and fortran version of the count-the-1s tests 
+   are due to the precision of computation. 
+
+8. Difference between cdbday.c and cdbday.f is small.
+
+9. When c programs read a binary file written by a fortran program. It reads
+   in some garbages at some places. It is hard to take care of this problem
+   if we do not know how the binary file is written. Anyway it should not 
+   cause significant differnce in the test results on the file. 
+
+10 diehard.c is the driver program. A "Makefile" is included so that the make           utility can be used to facilitate the compilation and updating of 
+   the programs. So to compile or recompile the programs after changes, one 
+   only needs to type "make". It yields a executable file by the name 
+   "diehard".  
+
+11 Because it is easy to redirect the output. diehard writes the result
+   only to standard output (screen). 
+
+12 Some types are defined in the file "header.c". uniform should be defined 
+   as unsigned. counter can be either unsigned or long int (it needs 32 bits).
+

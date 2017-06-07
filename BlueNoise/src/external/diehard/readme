@@ -1,0 +1,35 @@
+
+This directory contains C files for inclusion in
+
+Marsaglia's Diehard Battery of Tests of Randomness.
+
+The command
+               make
+will compile and incorporate all the files into an executable file: diehard.
+(and also produce *.o (object) files for each *.c file).
+
+Then the command
+           diehard
+will prompt for the name of the file to be tested.
+
+That file must be a form="unformatted",access="direct" binary
+file of from 10 to 12 million bytes.  The tests use various substrings
+of bits from the specified file, or form floats from 32-bit strings
+for tests that call for uniform [0,1) random variables.
+Because of the way that Fortran and C do things, the
+test results here are likely to be different from those produced by
+the original Fortran version of Diehard, but all tests are based on
+the assumption that the input file is a string of random 0's and 1's.
+The substrings may be formed in different ways in the C or Fortran
+implementations.
+
+The 'make' command will invoke the gcc (gnu C) compiler, so your
+system must have that compiler to use this C version of DIEHARD.
+It was translated from the original Fortran files by Dagang Wang,
+as the f2c conversions led to problems on some systems.
+
+If you have problems, or suggestions, please let me know.
+
+George Marsaglia
+geo@stat.fsu.edu
+

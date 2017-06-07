@@ -1,0 +1,20 @@
+Video: title slide
+Audio: In this paper, we present a technique to generate Poisson disk samples in parallel on a GPU.
+
+Video: show GPU 2D run-time followed by 2D samples
+Audio: Our algorithm generates samples in a multi-resolution fashion. Here we show our GPU program generating a set of 2D Poisson disk samples. Each pixel encodes a sample location by its color, with black pixels indicating absence of any sample.
+(pause)
+And here is the final set of samples. Due to parallel computation, our algorithm runs very fast and can generate up to 3.6 million samples per second on a commodity GPU.
+(pause)
+In addition, the result sample set has excellent blue noise spectrum, as shown here.
+
+Video: show a 3D set of sample balls with rotating view point
+Audio: our algorithm can also generate Poisson disk samples in higher dimensions. Here, we show a case of 3D samples.
+
+Video: show adaptive sampling results power spectrum
+Audio: our algorithm can also be applied for adaptive sampling as shown here.
+
+Video: end slide
+Audio: Our algorithm is simple and easy to implement. Please refer to our paper for more details. Thank you.
+
+
