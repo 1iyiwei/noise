@@ -3,7 +3,7 @@
 My code for the following projects:
 
 * [ParalleNoise](ParallelNoise):
-Paralle White Noise Generation on a GPU based on Cryptographic Hash, I3D 2008
+Parallel White Noise Generation on a GPU via Cryptographic Hash, I3D 2008
 
 * [BlueNoise](BlueNoise):
 Parallel Poisson Disk Sampling, SIGGRAPH 2008
