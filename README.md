@@ -2,7 +2,7 @@
 
 My code for the following projects:
 
-* [ParalleNoise](ParallelNoise):
+* [ParallelNoise](ParallelNoise):
 Parallel White Noise Generation on a GPU via Cryptographic Hash, I3D 2008
 
 * [BlueNoise](BlueNoise):
