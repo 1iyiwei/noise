@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Library", "Library.vcproj", "{05D565AB-644B-4EB3-9345-866A7989BA77}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MD5", "MD5.vcproj", "{6CCE7481-FCCC-48D7-AFFE-E950DBA09E00}"
+	ProjectSection(ProjectDependencies) = postProject
+		{05D565AB-644B-4EB3-9345-866A7989BA77} = {05D565AB-644B-4EB3-9345-866A7989BA77}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{05D565AB-644B-4EB3-9345-866A7989BA77}.Debug.ActiveCfg = Debug|Win32
+		{05D565AB-644B-4EB3-9345-866A7989BA77}.Debug.Build.0 = Debug|Win32
+		{05D565AB-644B-4EB3-9345-866A7989BA77}.Release.ActiveCfg = Release|Win32
+		{05D565AB-644B-4EB3-9345-866A7989BA77}.Release.Build.0 = Release|Win32
+		{6CCE7481-FCCC-48D7-AFFE-E950DBA09E00}.Debug.ActiveCfg = Debug|Win32
+		{6CCE7481-FCCC-48D7-AFFE-E950DBA09E00}.Debug.Build.0 = Debug|Win32
+		{6CCE7481-FCCC-48D7-AFFE-E950DBA09E00}.Release.ActiveCfg = Release|Win32
+		{6CCE7481-FCCC-48D7-AFFE-E950DBA09E00}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
