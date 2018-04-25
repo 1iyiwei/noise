@@ -21,17 +21,18 @@ using namespace std;
 int Main(int argc, char **argv)
 {
     // input arguments
-    int min_argc = 3;
+    int min_argc = 4;
 
     if(argc < min_argc)
     {
-        cerr << argv[0] << " input_sample_file_name dimension" << endl;
+        cerr << argv[0] << " input_sample_file_name dimension class_id" << endl;
         return 1;
     }
     
     int arg_ctr = 0;
     const string input_sample_file_name = argv[++arg_ctr];
     const int dimension = atoi(argv[++arg_ctr]);
+    const int class_id = atoi(argv[++arg_ctr]);
 
     const CoordinateType default_value = 0;
 
@@ -44,6 +45,12 @@ int Main(int argc, char **argv)
         return 1;
     }
     
+    // process
+    for(unsigned int k = 0; k < input_samples.size(); k++)
+    {
+        input_samples[k].id = class_id;
+    }
+
     // output
     if(! Utility::WriteSamples(input_samples, "cout"))
     {
