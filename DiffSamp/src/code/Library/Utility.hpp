@@ -46,6 +46,8 @@ public:
 
     static int WriteSamples(const vector<Sample> & samples, const string & output_file_name);
 
+    static int ReadSamples(const int has_id, const int dimension, const string & input_file_name, vector<Sample> & samples);
+
     enum SampleMode {SAMPLE_ASCII, SAMPLE_BINARY};
 
     static int ReadSamples(const SampleMode & mode, const int has_id, const int dimension,const string & input_file_name, vector<Sample> & samples);

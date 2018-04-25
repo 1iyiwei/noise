@@ -179,9 +179,7 @@ bool Utility::Inside(const vector<float> & domain_min, const vector<float> & dom
 
 int Utility::ReadSamples(const int dimension, const string & input_file_name, vector<Sample> & samples)
 {
-    const SampleMode input_mode = (((input_file_name.find(".txt") == string::npos) && (input_file_name != "cin")) ? SAMPLE_BINARY : SAMPLE_ASCII);
-
-    return ReadSamples(input_mode, 1, dimension, input_file_name, samples);
+    return ReadSamples(1, dimension, input_file_name, samples);
 }
 
 int Utility::WriteSamples(const vector<Sample> & samples, const string & output_file_name)
@@ -189,6 +187,13 @@ int Utility::WriteSamples(const vector<Sample> & samples, const string & output_
     const SampleMode output_mode = (((output_file_name.find(".txt") == string::npos) && (output_file_name != "cout")) ? SAMPLE_BINARY : SAMPLE_ASCII);
 
     return WriteSamples(output_mode, 1, samples, output_file_name);
+}
+
+int Utility::ReadSamples(const int has_id, const int dimension, const string & input_file_name, vector<Sample> & samples)
+{
+    const SampleMode input_mode = (((input_file_name.find(".txt") == string::npos) && (input_file_name != "cin")) ? SAMPLE_BINARY : SAMPLE_ASCII);
+
+    return ReadSamples(input_mode, has_id, dimension, input_file_name, samples);
 }
 
 int Utility::ReadSamples(const SampleMode & mode,  const int has_id, const int dimension, const string & input_file_name, vector<Sample> & samples)

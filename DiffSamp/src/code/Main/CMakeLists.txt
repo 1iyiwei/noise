@@ -34,6 +34,7 @@ DrawSamples
 F2M2PFM
 HexagonalGrid
 Histogram
+IDSamples
 Importance2JacobianField
 IsotropicDiffRho
 IsotropicDiffXform

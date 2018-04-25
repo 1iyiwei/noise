@@ -8,6 +8,7 @@ INCLUDE(${PROJECT_SOURCE_DIR}/../../automation/custom/CopyScripts.cmake)
 # List all source files
 SET(SOURCE_FILES
     aniso.sh
+    demo.sh
     do.sh
     fig2eps
     geom.sh
